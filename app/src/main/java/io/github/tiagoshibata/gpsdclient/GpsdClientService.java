@@ -14,15 +14,15 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.util.Log;
 
 
-// TODO NmeaListener is deprecated in API level 24
-// Replace with OnNmeaMessageListener when support for old devices is dropped
-// TODO GpsStatus.Listener is deprecated in API level 24
-// Replace with GnssStatus.Callback when support for old devices is dropped
+// TODO NmeaListener/GpsStatus.Listener are deprecated in API level 24
+// Replace with OnNmeaMessageListener/GnssStatus.Callback when support for old devices is dropped
 public class GpsdClientService extends Service implements GpsStatus.Listener, LocationListener, NmeaListener, SensorEventListener {
     private LocationManager locationManager;
+    private PowerManager.WakeLock wakeLock;
     private final String TAG = "GpsdClientService";
 
     @Override
@@ -43,6 +43,10 @@ public class GpsdClientService extends Service implements GpsStatus.Listener, Lo
             Log.e(TAG, "No permission to access GPS");
             throw e;  // FIXME can onCreate throw?
         }
+
+        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "GPSd position updates");
+        wakeLock.acquire();
     }
 
     @Override
@@ -60,6 +64,7 @@ public class GpsdClientService extends Service implements GpsStatus.Listener, Lo
     @Override
     public void onDestroy() {
         ((SensorManager) getSystemService(SENSOR_SERVICE)).unregisterListener(this);
+        wakeLock.release();
     }
 
     @Override
