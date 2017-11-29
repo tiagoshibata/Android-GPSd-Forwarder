@@ -53,14 +53,12 @@ public class GpsdClientService extends Service implements GpsStatus.Listener, Lo
     @Override
     public IBinder onBind(Intent intent) {
         // TODO auto stop after a given number of errors
-//        throw new UnsupportedOperationException("Not yet implemented");
-        // TODO send logs https://developer.android.com/reference/android/os/IBinder.html
+        // TODO send logs to main activity: https://developer.android.com/reference/android/os/IBinder.html
         return null;
     }
 
     @Override
     public void onDestroy() {
-        // TODO cleanup
         ((SensorManager) getSystemService(SENSOR_SERVICE)).unregisterListener(this);
     }
 
@@ -118,8 +116,11 @@ public class GpsdClientService extends Service implements GpsStatus.Listener, Lo
             case GpsStatus.GPS_EVENT_FIRST_FIX:
                 return "Got first fix";
             case GpsStatus.GPS_EVENT_SATELLITE_STATUS:
-//                return "Satellite count changed: " + locationManager.getGpsStatus(status).getSatellites();
-                return "Satellite count changed";
+                try {
+                    return "Satellite count changed: " + locationManager.getGpsStatus(null).getSatellites();
+                } catch (SecurityException e) {  // User revoked GPS permission
+                    return "Satellite count changed";
+                }
         }
         return "";
     }
