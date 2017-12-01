@@ -7,20 +7,20 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.location.GpsStatus;
 import android.location.GpsStatus.NmeaListener;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.location.LocationProvider;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.util.Log;
 
 
-// TODO NmeaListener/GpsStatus.Listener are deprecated in API level 24
-// Replace with OnNmeaMessageListener/GnssStatus.Callback when support for old devices is dropped
-public class GpsdClientService extends Service implements GpsStatus.Listener, LocationListener, NmeaListener, SensorEventListener {
+// TODO NmeaListener are deprecated in API level 24
+// Replace with OnNmeaMessageListener when support for old devices is dropped
+public class GpsdClientService extends Service implements LocationListener, NmeaListener, SensorEventListener {
     private LocationManager locationManager;
     private PowerManager.WakeLock wakeLock;
     private final String TAG = "GpsdClientService";
@@ -37,8 +37,6 @@ public class GpsdClientService extends Service implements GpsStatus.Listener, Lo
                 Log.e(TAG, "No GPS available");
                 throw e;  // FIXME can onCreate throw?
             }
-            if (!locationManager.addGpsStatusListener(this))
-                Log.w(TAG, "Failed to register for GPS status notifications");
         } catch (SecurityException e) {
             Log.e(TAG, "No permission to access GPS");
             throw e;  // FIXME can onCreate throw?
@@ -83,18 +81,17 @@ public class GpsdClientService extends Service implements GpsStatus.Listener, Lo
     }
 
     @Override
-    public void onGpsStatusChanged(int status) {
-        log( "GPS status: " + gpsStatusToString(status));
-    }
-
-    @Override
     public void onLocationChanged(Location location) {
         // Ignored
     }
 
     @Override
-    public void onStatusChanged(String s, int i, Bundle bundle) {
-
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+        // GnssStatus.Callback provides more satellite information if desired
+        log(provider + " status: " + gpsStatusToString(status));
+        int satellites = extras.getInt("satellites", -1);
+        if (satellites != -1)
+            log(Integer.toString(satellites) + " satellites");
     }
 
     @Override
@@ -114,19 +111,14 @@ public class GpsdClientService extends Service implements GpsStatus.Listener, Lo
 
     private String gpsStatusToString(int status) {
         switch (status) {
-            case GpsStatus.GPS_EVENT_STARTED:
-                return "System started";
-            case GpsStatus.GPS_EVENT_STOPPED:
-                return "System stopped";
-            case GpsStatus.GPS_EVENT_FIRST_FIX:
-                return "Got first fix";
-            case GpsStatus.GPS_EVENT_SATELLITE_STATUS:
-                try {
-                    return "Satellite count changed: " + locationManager.getGpsStatus(null).getSatellites();
-                } catch (SecurityException e) {  // User revoked GPS permission
-                    return "Satellite count changed";
-                }
+            case LocationProvider.OUT_OF_SERVICE:
+                return "Out of service";
+            case LocationProvider.TEMPORARILY_UNAVAILABLE:
+                return "Temporarily unavailable";
+            case LocationProvider.AVAILABLE:
+                return "Available";
+            default:
+                return "Unknown";
         }
-        return "";
     }
 }
