@@ -3,10 +3,6 @@ package io.github.tiagoshibata.gpsdclient;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.hardware.Sensor;
-import android.hardware.SensorEvent;
-import android.hardware.SensorEventListener;
-import android.hardware.SensorManager;
 import android.location.GpsStatus.NmeaListener;
 import android.location.Location;
 import android.location.LocationListener;
@@ -20,7 +16,7 @@ import android.util.Log;
 
 // TODO NmeaListener are deprecated in API level 24
 // Replace with OnNmeaMessageListener when support for old devices is dropped
-public class GpsdClientService extends Service implements LocationListener, NmeaListener, SensorEventListener {
+public class GpsdClientService extends Service implements LocationListener, NmeaListener {
     private LocationManager locationManager;
     private PowerManager.WakeLock wakeLock;
     private final String TAG = "GpsdClientService";
@@ -61,23 +57,14 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
 
     @Override
     public void onDestroy() {
-        ((SensorManager) getSystemService(SENSOR_SERVICE)).unregisterListener(this);
+        locationManager.removeNmeaListener(this);
+        locationManager.removeUpdates(this);
         wakeLock.release();
     }
 
     @Override
     public void onNmeaReceived(long timestamp, String nmea) {
         log(nmea);
-    }
-
-    @Override
-    public void onSensorChanged(SensorEvent sensorEvent) {
-        // No sensors registered for onSensorChanged
-    }
-
-    @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-        log( "GPS accuracy: " + accuracy);
     }
 
     @Override
