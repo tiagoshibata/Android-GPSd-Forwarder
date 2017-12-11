@@ -19,17 +19,7 @@ public class MainActivity extends Activity {
     private Intent gpsdClientServiceIntent;
     private TextView textView;
     private ServiceConnection serviceConnection = new ServiceConnection() {
-        private LoggingCallback logger = new LoggingCallback() {
-            @Override
-            public void log(final String message) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        print(message);
-                    }
-                });
-            }
-        };
+        private LoggingCallback logger = message -> runOnUiThread(() -> print(message));
 
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
