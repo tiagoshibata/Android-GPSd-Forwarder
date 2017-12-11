@@ -13,7 +13,6 @@ import android.os.IBinder;
 import android.util.Log;
 
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.SocketException;
 
 // TODO NmeaListener is deprecated in API level 24
@@ -24,23 +23,28 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
     private static final String TAG = "GpsdClientService";
     private LocationManager locationManager;
     private UdpSensorStream sensorStream;
+    private Binder binder = new Binder();
+    private LoggingCallback loggingCallback;
+
+    class Binder extends android.os.Binder {
+        void setLoggingCallback(LoggingCallback callback) {
+            loggingCallback = callback;
+        }
+    }
 
     @Override
     public void onCreate() {
         super.onCreate();
         locationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
-
         try {
             locationManager.addNmeaListener(this);
             try {
                 locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
             } catch (IllegalArgumentException e) {
-                Log.e(TAG, "No GPS available");
-                throw new RuntimeException("No GPS available");
+                fail("No GPS available");
             }
         } catch (SecurityException e) {
-            Log.e(TAG, "No permission to access GPS");
-            throw e;
+            fail("No permission to access GPS");
         }
     }
 
@@ -52,21 +56,25 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
         if (serverAddress == null || serverPort <= 0)
             throw new RuntimeException(
                     "GpsdClientService requires parameters " + GPSD_SERVER_ADDRESS + " and " + GPSD_SERVER_PORT);
-//        SocketAddress server = 	InetSocketAddress.createUnresolved(serverAddress, serverPort);
-        SocketAddress server = 	new InetSocketAddress(serverAddress, serverPort);
+        if (sensorStream != null)
+            sensorStream.stop();
+        // Note: GPSD_SERVER_ADDRESS must in a resolved form.
+        // An exception will be thrown if a hostname is given, since the service's main thread is
+        // the UI thread when sharing the process between the activity and the service, and
+        // networking on the UI thread is forbidden. See:
+        // https://developer.android.com/reference/android/app/Service.html#onStartCommand(android.content.Intent, int, int)
+        InetSocketAddress server = new InetSocketAddress(serverAddress, serverPort);
         try {
             sensorStream = new UdpSensorStream(server);
         } catch (SocketException e) {
-            log(e.toString());
-            throw new RuntimeException(e);
+            fail(e.toString());
         }
         return START_REDELIVER_INTENT;
     }
 
     @Override
     public IBinder onBind(Intent intent) {
-        // TODO send logs to main activity: https://developer.android.com/reference/android/os/IBinder.html
-        return null;
+        return binder;
     }
 
     @Override
@@ -74,13 +82,14 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
         super.onDestroy();
         locationManager.removeNmeaListener(this);
         locationManager.removeUpdates(this);
-        sensorStream.stop();
+        if (sensorStream != null)
+            sensorStream.stop();
     }
 
     @Override
     public void onNmeaReceived(long timestamp, String nmea) {
-        log(nmea);
-        sensorStream.send(nmea + "\r\n");
+        if (sensorStream != null)
+            sensorStream.send(nmea + "\r\n");
     }
 
     @Override
@@ -108,9 +117,15 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
         log( "Location provider disabled: " + provider);
     }
 
-    private void log(String msg) {
-        Log.i(TAG, msg);
-        // TODO IBinder communication
+    private void log(String message) {
+        Log.i(TAG, message);
+        if (loggingCallback != null)
+            loggingCallback.log(message);
+    }
+
+    private void fail(String message) {
+        log(message);
+        stopSelf();
     }
 
     private String gpsStatusToString(int status) {
