@@ -51,6 +51,7 @@ public class MainActivity extends Activity {
 
         LocationManager locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
         if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            print("GPS is not enabled! Go to Settings and enable a location mode with GPS");
             Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
             startActivity(intent);
         }
@@ -65,8 +66,10 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (gpsdClientServiceIntent != null)
+        if (gpsdClientServiceIntent != null) {
+            unbindService(serviceConnection);
             stopService(gpsdClientServiceIntent);
+        }
     }
 
     @Override

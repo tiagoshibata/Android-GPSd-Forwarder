@@ -101,10 +101,12 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
     public void onStatusChanged(String provider, int status, Bundle extras) {
         // GnssStatus.Callback provides more satellite information if desired, and information when
         // the system enables or disables the hardware
-        log(provider + " status: " + gpsStatusToString(status));
+        String message = provider + " status: " + gpsStatusToString(status);
         int satellites = extras.getInt("satellites", -1);
-        if (satellites != -1)
-            log(Integer.toString(satellites) + " satellites");
+        if (satellites == -1)
+            log(message);
+        else
+            log(message + " with " + Integer.toString(satellites) + " satellites");
     }
 
     @Override
