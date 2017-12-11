@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">GPSd Client</string>
+    <string name="start">Start</string>
+    <string name="server_address_hint">Server address</string>
+    <string name="server_port_hint">Server port</string>
 </resources>

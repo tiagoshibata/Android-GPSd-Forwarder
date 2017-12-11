@@ -6,6 +6,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
 import android.os.Build;
@@ -16,8 +17,13 @@ import android.widget.TextView;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_CODE_FINE_LOCATION = 0;
+    private static final String SERVER_ADDRESS = "SERVER_ADDRESS";
+    private static final String SERVER_PORT = "SERVER_PORT";
     private Intent gpsdClientServiceIntent;
+    private SharedPreferences preferences;
     private TextView textView;
+    private TextView serverAddressTextView;
+    private TextView serverPortTextView;
     private ServiceConnection serviceConnection = new ServiceConnection() {
         private LoggingCallback logger = message -> runOnUiThread(() -> print(message));
 
@@ -38,6 +44,8 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         textView = findViewById(R.id.textView);
+        serverAddressTextView = findViewById(R.id.serverAddress);
+        serverPortTextView = findViewById(R.id.serverPort);
 
         LocationManager locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
         if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
@@ -51,6 +59,14 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_CODE_FINE_LOCATION);
         else
             startGpsdClientService();
+
+        preferences = getPreferences(MODE_PRIVATE);
+        String address = preferences.getString(SERVER_ADDRESS, "");
+        if (!address.isEmpty())
+            serverAddressTextView.setText(address);
+        int port = preferences.getInt(SERVER_PORT, -1);
+        if (port != -1)
+            serverPortTextView.setText(String.valueOf(port));
     }
 
     @Override
@@ -60,6 +76,10 @@ public class MainActivity extends Activity {
             unbindService(serviceConnection);
             stopService(gpsdClientServiceIntent);
         }
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putString(SERVER_ADDRESS, serverAddressTextView.getText().toString())
+                .putInt(SERVER_PORT, Integer.parseInt(serverPortTextView.getText().toString()));
+        editor.apply();
     }
 
     @Override
