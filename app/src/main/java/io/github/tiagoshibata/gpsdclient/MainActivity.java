@@ -13,7 +13,12 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
+
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 public class MainActivity extends Activity {
     private static final int REQUEST_CODE_FINE_LOCATION = 0;
@@ -24,6 +29,8 @@ public class MainActivity extends Activity {
     private TextView textView;
     private TextView serverAddressTextView;
     private TextView serverPortTextView;
+    private Button startStopButton;
+    private boolean connected;
     private ServiceConnection serviceConnection = new ServiceConnection() {
         private LoggingCallback logger = message -> runOnUiThread(() -> print(message));
 
@@ -36,6 +43,8 @@ public class MainActivity extends Activity {
         @Override
         public void onServiceDisconnected(ComponentName name) {
             logger.log("GpsdClientService disconnected");
+            setServiceConnected(false);
+            startStopButton.setEnabled(true);
         }
     };
 
@@ -46,6 +55,7 @@ public class MainActivity extends Activity {
         textView = findViewById(R.id.textView);
         serverAddressTextView = findViewById(R.id.serverAddress);
         serverPortTextView = findViewById(R.id.serverPort);
+        startStopButton = findViewById(R.id.startStopButton);
 
         LocationManager locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
         if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
@@ -72,14 +82,15 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (gpsdClientServiceIntent != null) {
-            unbindService(serviceConnection);
-            stopService(gpsdClientServiceIntent);
-        }
+        stopGpsdService();
         SharedPreferences.Editor editor = preferences.edit();
+        try {
+            editor.putInt(SERVER_PORT, getPort());
+        } catch (NumberFormatException e) {
+            editor.remove(SERVER_PORT);
+        }
         editor.putString(SERVER_ADDRESS, serverAddressTextView.getText().toString())
-                .putInt(SERVER_PORT, Integer.parseInt(serverPortTextView.getText().toString()));
-        editor.apply();
+                .apply();
     }
 
     @Override
@@ -90,17 +101,71 @@ public class MainActivity extends Activity {
             print("GPS permission denied");
     }
 
-    private void startGpsdClientService() {
-        gpsdClientServiceIntent = new Intent(this, GpsdClientService.class);
-        gpsdClientServiceIntent
-                .putExtra(GpsdClientService.GPSD_SERVER_ADDRESS, "10.0.0.131")
-                .putExtra(GpsdClientService.GPSD_SERVER_PORT, 1414);
-        if (!bindService(gpsdClientServiceIntent, serviceConnection, BIND_AUTO_CREATE) ||
-                startService(gpsdClientServiceIntent) == null) {
-            print("Failed to bind to service");
+    public void startStopButtonOnClick(View view) {
+        setServiceConnected(!connected);
+        if (connected) {
+            startGpsdClientService();
+        } else {
+            stopGpsdService();
+            startStopButton.setEnabled(true);
+        }
+    }
+
+    private void stopGpsdService() {
+        if (gpsdClientServiceIntent != null) {
             unbindService(serviceConnection);
+            stopService(gpsdClientServiceIntent);
             gpsdClientServiceIntent = null;
         }
+    }
+
+    private void setServiceConnected(boolean connected) {
+        this.connected = connected;
+        startStopButton.setText(connected ? R.string.stop : R.string.start);
+        startStopButton.setEnabled(false);
+        serverAddressTextView.setEnabled(!connected);
+        serverPortTextView.setEnabled(!connected);
+    }
+
+    private void startGpsdClientService() {
+        new Thread() {
+            @Override
+            public void run() {
+                try {
+                    String host = serverAddressTextView.getText().toString();
+                    String address;
+                    try {
+                        address = InetAddress.getByName(host).getHostAddress();
+                    } catch (UnknownHostException e) {
+                        throw new RuntimeException("Unknown host " + host);
+                    }
+                    print("Resolved to address " + address);
+                    Intent intent = new Intent(MainActivity.this, GpsdClientService.class);
+                    intent.putExtra(GpsdClientService.GPSD_SERVER_ADDRESS, address)
+                            .putExtra(GpsdClientService.GPSD_SERVER_PORT, getPort());
+                    if (!bindService(intent, serviceConnection, BIND_AUTO_CREATE)) {
+                        throw new RuntimeException("Failed to bind to service");
+                    }
+                    if (startService(intent) == null) {
+                        unbindService(serviceConnection);
+                        throw new RuntimeException("Failed to start service");
+                    }
+                    gpsdClientServiceIntent = intent;
+                } catch (RuntimeException e) {
+                    runOnUiThread(() -> setServiceConnected(false));
+                    print(e.getMessage());
+                } finally {
+                    runOnUiThread(() -> startStopButton.setEnabled(true));
+                }
+            }
+        }.start();
+    }
+
+    private int getPort() {
+        int port = Integer.parseInt(serverPortTextView.getText().toString());
+        if (port <= 0 || port > 65535)
+            throw new NumberFormatException("Invalid port number");
+        return port;
     }
 
     private void print(String message) {
