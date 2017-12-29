@@ -1,5 +1,8 @@
 package io.github.tiagoshibata.gpsdclient;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -8,6 +11,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
@@ -22,6 +26,8 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
     public static final String GPSD_SERVER_ADDRESS = "io.github.tiagoshibata.GPSD_SERVER_ADDRESS";
     public static final String GPSD_SERVER_PORT = "io.github.tiagoshibata.GPSD_SERVER_PORT";
     private static final String TAG = "GpsdClientService";
+    private static final String NOTIFICATION_CHANNEL = "gpsd_streaming";
+    private static final int NOTIFICATION_ID = 1;
     private LocationManager locationManager;
     private UdpSensorStream sensorStream;
     private Binder binder = new Binder();
@@ -48,6 +54,14 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
         } catch (SecurityException e) {
             fail("No permission to access GPS");
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            // Setup notification channel
+            NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
+            notificationManager.createNotificationChannel(new NotificationChannel(
+                    NOTIFICATION_CHANNEL,
+                    getString(R.string.notification_channel_name),
+                    NotificationManager.IMPORTANCE_LOW));
+        }
         PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "GPSd Client");
         wakeLock.acquire();
@@ -61,6 +75,15 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
         if (serverAddress == null || serverPort <= 0)
             throw new RuntimeException(
                     "GpsdClientService requires parameters " + GPSD_SERVER_ADDRESS + " and " + GPSD_SERVER_PORT);
+        Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ?
+                new Notification.Builder(getApplicationContext(), NOTIFICATION_CHANNEL) :
+                new Notification.Builder(getApplicationContext());
+        builder
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setContentTitle("Streaming GPS")
+                .setContentText("Streaming to " + serverAddress + ":" + serverPort)
+                .build();
+        startForeground(NOTIFICATION_ID, builder.build());
         if (sensorStream != null)
             sensorStream.stop();
         // Note: GPSD_SERVER_ADDRESS must in a resolved form.
@@ -133,6 +156,7 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
 
     private void fail(String message) {
         log(message);
+        stopForeground(true);
         stopSelf();
     }
 

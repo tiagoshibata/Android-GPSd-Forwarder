@@ -13,7 +13,7 @@ class UdpSensorStream {
     private final String TAG = "UdpSensorStream";
 
     private class NetworkThread extends Thread {
-        private ArrayBlockingQueue<String> messageQueue = new ArrayBlockingQueue<>(5);
+        private ArrayBlockingQueue<String> messageQueue = new ArrayBlockingQueue<>(30);
         private boolean running = true;
         private SocketAddress address;
         private DatagramSocket udpSocket;
