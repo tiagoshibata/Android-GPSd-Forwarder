@@ -10,6 +10,7 @@ import android.location.LocationManager;
 import android.location.LocationProvider;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.util.Log;
 
 import java.net.InetSocketAddress;
@@ -25,6 +26,7 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
     private UdpSensorStream sensorStream;
     private Binder binder = new Binder();
     private LoggingCallback loggingCallback;
+    private PowerManager.WakeLock wakeLock;
 
     class Binder extends android.os.Binder {
         void setLoggingCallback(LoggingCallback callback) {
@@ -35,7 +37,7 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
     @Override
     public void onCreate() {
         super.onCreate();
-        locationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         try {
             locationManager.addNmeaListener(this);
             try {
@@ -46,6 +48,9 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
         } catch (SecurityException e) {
             fail("No permission to access GPS");
         }
+        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "GPSd Client");
+        wakeLock.acquire();
     }
 
     @Override
@@ -84,6 +89,7 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
         locationManager.removeUpdates(this);
         if (sensorStream != null)
             sensorStream.stop();
+        wakeLock.release();
     }
 
     @Override
