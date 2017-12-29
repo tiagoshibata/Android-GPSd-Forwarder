@@ -13,6 +13,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
+import android.text.method.ScrollingMovementMethod;
 import android.view.View;
 import android.widget.Button;
 import android.widget.TextView;
@@ -42,7 +43,7 @@ public class MainActivity extends Activity {
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            logger.log("GpsdClientService disconnected");
+            logger.log("GpsdClientService died");
             setServiceConnected(false);
             startStopButton.setEnabled(true);
         }
@@ -53,9 +54,18 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         textView = findViewById(R.id.textView);
+        textView.setMovementMethod(new ScrollingMovementMethod());
         serverAddressTextView = findViewById(R.id.serverAddress);
         serverPortTextView = findViewById(R.id.serverPort);
         startStopButton = findViewById(R.id.startStopButton);
+
+        preferences = getPreferences(MODE_PRIVATE);
+        String address = preferences.getString(SERVER_ADDRESS, "");
+        if (!address.isEmpty())
+            serverAddressTextView.setText(address);
+        int port = preferences.getInt(SERVER_PORT, -1);
+        if (port > 0)
+            serverPortTextView.setText(String.valueOf(port));
 
         LocationManager locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
         if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
@@ -67,16 +77,6 @@ public class MainActivity extends Activity {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
                 checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_CODE_FINE_LOCATION);
-        else
-            startGpsdClientService();
-
-        preferences = getPreferences(MODE_PRIVATE);
-        String address = preferences.getString(SERVER_ADDRESS, "");
-        if (!address.isEmpty())
-            serverAddressTextView.setText(address);
-        int port = preferences.getInt(SERVER_PORT, -1);
-        if (port != -1)
-            serverPortTextView.setText(String.valueOf(port));
     }
 
     @Override
@@ -85,7 +85,7 @@ public class MainActivity extends Activity {
         stopGpsdService();
         SharedPreferences.Editor editor = preferences.edit();
         try {
-            editor.putInt(SERVER_PORT, getPort());
+            editor.putInt(SERVER_PORT, validatePort(serverPortTextView.getText().toString()));
         } catch (NumberFormatException e) {
             editor.remove(SERVER_PORT);
         }
@@ -96,9 +96,11 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         if (requestCode == REQUEST_CODE_FINE_LOCATION && grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
-            startGpsdClientService();
-        else
+            print("GPS access allowed");
+        else {
             print("GPS permission denied");
+            startStopButton.setEnabled(false);
+        }
     }
 
     public void startStopButtonOnClick(View view) {
@@ -161,10 +163,10 @@ public class MainActivity extends Activity {
         }.start();
     }
 
-    private int getPort() {
-        int port = Integer.parseInt(serverPortTextView.getText().toString());
+    private static int validatePort(String value) {
+        int port = Integer.parseInt(value);
         if (port <= 0 || port > 65535)
-            throw new NumberFormatException("Invalid port number");
+            throw new NumberFormatException("Invalid port");
         return port;
     }
 

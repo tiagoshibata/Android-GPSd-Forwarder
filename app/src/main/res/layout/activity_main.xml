@@ -1,42 +1,55 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
+    android:background="#0099cc"
     tools:context="io.github.tiagoshibata.gpsdclient.MainActivity">
-
-    <EditText
-        android:id="@+id/serverAddress"
+    <TextView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:ems="10"
-        android:hint="@string/server_address_hint" />
-
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:text="@string/app_name"
+        android:textColor="#33b5e5"
+        android:textSize="50sp"
+        android:textStyle="bold" />
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
-
+        android:layout_height="match_parent"
+        android:orientation="vertical">
         <EditText
-            android:id="@+id/serverPort"
-            android:layout_width="wrap_content"
+            android:id="@+id/serverAddress"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:ems="10"
-            android:inputType="number"
-            android:hint="@string/server_port_hint" />
-
-        <Button
-            android:id="@+id/startStopButton"
-            android:layout_width="wrap_content"
+            android:hint="@string/server_address_hint" />
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <EditText
+                android:id="@+id/serverPort"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:ems="10"
+                android:inputType="number"
+                android:hint="@string/server_port_hint" />
+            <Button
+                android:id="@+id/startStopButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="startStopButtonOnClick"
+                android:text="@string/start" />
+        </LinearLayout>
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/start"
-            android:onClick="startStopButtonOnClick" />
+            android:gravity="bottom"
+            android:maxLines="200"
+            android:scrollbars="vertical"
+            android:textColor="@android:color/black"
+            android:typeface="monospace" />
     </LinearLayout>
-
-    <TextView
-        android:id="@+id/textView"
-        android:layout_width="match_parent"
-        android:layout_height="0dp" />
-</LinearLayout>
+</FrameLayout>
