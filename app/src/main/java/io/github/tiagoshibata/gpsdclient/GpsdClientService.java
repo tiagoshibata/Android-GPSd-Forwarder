@@ -140,12 +140,12 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
 
     @Override
     public void onProviderEnabled(String provider) {
-        log( "Location provider enabled: " + provider);
+        log("Location provider enabled: " + provider);
     }
 
     @Override
     public void onProviderDisabled(String provider) {
-        log( "Location provider disabled: " + provider);
+        log("Location provider disabled: " + provider);
     }
 
     private void log(String message) {
