@@ -79,7 +79,7 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
                 new Notification.Builder(getApplicationContext(), NOTIFICATION_CHANNEL) :
                 new Notification.Builder(getApplicationContext());
         builder
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setSmallIcon(R.drawable.notification_icon)
                 .setContentTitle("Streaming GPS")
                 .setContentText("Streaming to " + serverAddress + ":" + serverPort)
                 .build();
