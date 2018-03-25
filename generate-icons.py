@@ -1,35 +1,15 @@
 #!/bin/env python3
-import argparse
 from pathlib import Path
 import subprocess
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--icon', type=str, help='App icon')
-parser.add_argument('--round-icon', type=str, help='App icon')
-args = parser.parse_args()
-
 
 def convert(source, destination, resolution):
-    subprocess.check_call(['convert', '-resize', '{0}x{0}'.format(resolution), source, destination])
-
-
-resolutions = {
-    'mdpi': 48,
-    'hdpi': 72,
-    'xhdpi': 96,
-    'xxhdpi': 144,
-    'xxxhdpi': 192,
-}
-root = Path(__file__).resolve().parent
-res = root / 'app/src/main/res'
-
-if args.icon:
-    for name, resolution in resolutions.items():
-        convert(args.icon, res / 'mipmap-{}/ic_launcher.png'.format(name), resolution)
-
-if args.round_icon:
-    for name, resolution in resolutions.items():
-        convert(args.round_icon, res / 'mipmap-{}/ic_launcher_round.png'.format(name), resolution)
+    destination = Path(destination)
+    if destination.is_dir():
+        destination = destination / Path(source).name
+    if not isinstance(resolution, tuple):
+        resolution = (resolution, resolution)
+    subprocess.check_call(['convert', '-resize', '{}x{}'.format(*resolution), source, str(destination)])
 
 
 def pngquant(source):
@@ -39,6 +19,45 @@ def pngquant(source):
         if e.returncode != 98:  # --skip-if-larger
             raise
 
+root = Path(__file__).resolve().parent
+assets_src = root / 'assets_src'
+res = root / 'app/src/main/res'
 
-for png in root.glob('**/*.png'):
-    pngquant(png)
+
+def mipmap(specifier):
+    return res / 'mipmap-{}'.format(specifier)
+
+
+def drawable(specifier):
+    return res / 'drawable-{}'.format(specifier)
+
+
+def main():
+    print('Converting app icons')
+    resolutions = {
+        'mdpi': 48,
+        'hdpi': 72,
+        'xhdpi': 96,
+        'xxhdpi': 144,
+        'xxxhdpi': 192,
+    }
+    for dpi, resolution in resolutions.items():
+        convert(assets_src / 'ic_launcher.png', mipmap(dpi), resolution)
+        convert(assets_src / 'ic_launcher_round.png', mipmap(dpi), resolution)
+    print('Converting drawables')
+    # Taken from:
+    # https://developer.android.com/guide/practices/ui_guidelines/icon_design_status_bar.html#size9
+    notification_resolutions = {
+        'ldpi': (12, 19),
+        'mdpi': (16, 25),
+        'hdpi': (24, 38),
+    }
+    for dpi, resolution in notification_resolutions.items():
+        convert(assets_src / 'notification_icon.png', mipmap(dpi), resolution)
+    print('Compressing PNG')
+    for png in (f for directory in (res, assets_src) for f in directory.glob('**/*.png') ):
+        pngquant(png)
+
+
+if __name__ == '__main__':
+    main()
