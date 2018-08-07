@@ -53,7 +53,7 @@ def main():
         'hdpi': (24, 38),
     }
     for dpi, resolution in notification_resolutions.items():
-        convert(assets_src / 'notification_icon.png', mipmap(dpi), resolution)
+        convert(assets_src / 'notification_icon.png', drawable(dpi), resolution)
     print('Compressing PNG')
     for png in (f for directory in (res, assets_src) for f in directory.glob('**/*.png') ):
         pngquant(png)
