@@ -75,9 +75,10 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
         if (serverAddress == null || serverPort <= 0)
             throw new RuntimeException(
                     "GpsdClientService requires parameters " + GPSD_SERVER_ADDRESS + " and " + GPSD_SERVER_PORT);
+        Context applicationContext = getApplicationContext();
         Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ?
-                new Notification.Builder(getApplicationContext(), NOTIFICATION_CHANNEL) :
-                new Notification.Builder(getApplicationContext());
+                new Notification.Builder(applicationContext, NOTIFICATION_CHANNEL) :
+                new Notification.Builder(applicationContext);
         builder
                 .setSmallIcon(R.drawable.notification_icon)
                 .setContentTitle("Streaming GPS")

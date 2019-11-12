@@ -57,9 +57,8 @@ class UdpSensorStream {
      * <p>
      * The offer method is used, which is non-blocking, to avoid lockups if
      * called from the UI thread. Note, however, that the message might be
-     * discarded if the queue is full (highly unlikely in our scenario, since
-     * UDP is used for transport, which won't block for long, and GPS messages
-     * have low frequency).
+     * discarded if the queue is full (unlikely/impossible in our scenario,
+     * since UDP is used for transport, and GPS messages have low frequency).
      *
      * @param  data data to be transmitted
      */

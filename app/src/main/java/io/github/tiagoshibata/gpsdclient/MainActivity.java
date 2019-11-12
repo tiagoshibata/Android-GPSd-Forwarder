@@ -62,6 +62,14 @@ public class MainActivity extends Activity {
         serverPortTextView = findViewById(R.id.serverPort);
         startStopButton = findViewById(R.id.startStopButton);
 
+        serverPortTextView.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void afterTextChanged(Editable editable) {
+                if (editable.length() >= 5 && Integer.parseInt(editable.toString()) > 65535)
+                    serverPortTextView.setText("65535");
+            }
+        });
+
         preferences = getPreferences(MODE_PRIVATE);
         String address = preferences.getString(SERVER_ADDRESS, "");
         if (!address.isEmpty())
@@ -86,14 +94,6 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         super.onDestroy();
         stopGpsdService();
-        SharedPreferences.Editor editor = preferences.edit();
-        try {
-            editor.putInt(SERVER_PORT, validatePort(serverPortTextView.getText().toString()));
-        } catch (NumberFormatException e) {
-            editor.remove(SERVER_PORT);
-        }
-        editor.putString(SERVER_ADDRESS, serverAddressTextView.getText().toString())
-                .apply();
     }
 
     @Override
@@ -107,14 +107,20 @@ public class MainActivity extends Activity {
     }
 
     public void startStopButtonOnClick(View view) {
-        setServiceConnected(!connected);
-        if (connected) {
+        if (!connected) {
+            String serverAddress = serverAddressTextView.getText().toString();
+            int serverPort = Integer.parseInt(serverPortTextView.getText().toString());
+            preferences.edit()
+                    .putString(SERVER_ADDRESS, serverAddress)
+                    .putInt(SERVER_PORT, serverPort)
+                    .apply();
             gpsdServiceTask = new StartGpsdServiceTask(this);
-            gpsdServiceTask.execute(serverAddressTextView.getText().toString(), serverPortTextView.getText().toString());
+            gpsdServiceTask.execute(serverAddress, serverPort);
         } else {
             stopGpsdService();
             startStopButton.setEnabled(true);
         }
+        setServiceConnected(!connected);
     }
 
     private static class StartGpsdServiceTask extends AsyncTask<String, Void, String> {
@@ -127,12 +133,7 @@ public class MainActivity extends Activity {
 
         @Override
         protected String doInBackground(String... host) {
-            try {
-                port = validatePort(host[1]);
-            } catch (NumberFormatException e) {
-                cancel(false);
-                return "Invalid port";
-            }
+            port = Integer.parseInt(host[1]);
             try {
                 return InetAddress.getByName(host[0]).getHostAddress();
             } catch (UnknownHostException e) {
@@ -195,13 +196,6 @@ public class MainActivity extends Activity {
         startStopButton.setEnabled(false);
         serverAddressTextView.setEnabled(!connected);
         serverPortTextView.setEnabled(!connected);
-    }
-
-    private static int validatePort(String value) {
-        int port = Integer.parseInt(value);
-        if (port <= 0 || port > 65535)
-            throw new NumberFormatException("Invalid port");
-        return port;
     }
 
     private void print(String message) {
