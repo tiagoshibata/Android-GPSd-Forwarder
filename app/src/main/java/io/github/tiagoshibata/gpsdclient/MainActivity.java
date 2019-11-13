@@ -71,8 +71,21 @@ public class MainActivity extends Activity {
 
             @Override
             public void afterTextChanged(Editable editable) {
-                if (editable.length() >= 5 && Integer.parseInt(editable.toString()) > 65535)
-                    serverPortTextView.setText("65535");
+                if (editable.length() > 0) {
+                    String text = editable.toString();
+                    int value = Integer.parseInt(text);
+                    if (value == 0) {
+                        serverPortTextView.setText("");
+                        return;
+                    }
+                    if (value > 65535)
+                        serverPortTextView.setText("65535");
+                    else if (text.charAt(0) == '0')
+                        serverPortTextView.setText(Integer.toString(value));
+                    startStopButton.setEnabled(true);
+                } else {
+                    startStopButton.setEnabled(false);
+                }
             }
         });
 
