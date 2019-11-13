@@ -14,6 +14,8 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.provider.Settings;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.text.method.ScrollingMovementMethod;
 import android.view.View;
 import android.widget.Button;
@@ -52,9 +54,7 @@ public class MainActivity extends Activity {
     };
     private AsyncTask<String, Void, String> gpsdServiceTask;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    private void initializeUi() {
         setContentView(R.layout.activity_main);
         textView = findViewById(R.id.textView);
         textView.setMovementMethod(new ScrollingMovementMethod());
@@ -64,6 +64,12 @@ public class MainActivity extends Activity {
 
         serverPortTextView.addTextChangedListener(new TextWatcher() {
             @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
+            @Override
             public void afterTextChanged(Editable editable) {
                 if (editable.length() >= 5 && Integer.parseInt(editable.toString()) > 65535)
                     serverPortTextView.setText("65535");
@@ -71,12 +77,14 @@ public class MainActivity extends Activity {
         });
 
         preferences = getPreferences(MODE_PRIVATE);
-        String address = preferences.getString(SERVER_ADDRESS, "");
-        if (!address.isEmpty())
-            serverAddressTextView.setText(address);
-        int port = preferences.getInt(SERVER_PORT, -1);
-        if (port > 0)
-            serverPortTextView.setText(String.valueOf(port));
+        serverAddressTextView.setText(preferences.getString(SERVER_ADDRESS, ""));
+        serverPortTextView.setText(preferences.getString(SERVER_PORT, ""));
+    }
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        initializeUi();
 
         LocationManager locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
         if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
@@ -84,10 +92,7 @@ public class MainActivity extends Activity {
             Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
             startActivity(intent);
         }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
-                checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED)
-            requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_CODE_FINE_LOCATION);
+        ensureLocationPermission();
     }
 
     @Override
@@ -96,29 +101,38 @@ public class MainActivity extends Activity {
         stopGpsdService();
     }
 
+    private boolean ensureLocationPermission() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
+                checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED)
+            return true;
+        requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, REQUEST_CODE_FINE_LOCATION);
+        return false;
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
         if (requestCode == REQUEST_CODE_FINE_LOCATION && grantResults.length == 1 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
             print("GPS access allowed");
         else {
             print("GPS permission denied");
-            startStopButton.setEnabled(false);
         }
     }
 
     public void startStopButtonOnClick(View view) {
+        if (!ensureLocationPermission())
+            return;
         if (!connected) {
             String serverAddress = serverAddressTextView.getText().toString();
-            int serverPort = Integer.parseInt(serverPortTextView.getText().toString());
+            String serverPort = serverPortTextView.getText().toString();
             preferences.edit()
                     .putString(SERVER_ADDRESS, serverAddress)
-                    .putInt(SERVER_PORT, serverPort)
+                    .putString(SERVER_PORT, serverPort)
                     .apply();
             gpsdServiceTask = new StartGpsdServiceTask(this);
             gpsdServiceTask.execute(serverAddress, serverPort);
+            startStopButton.setEnabled(false);
         } else {
             stopGpsdService();
-            startStopButton.setEnabled(true);
         }
         setServiceConnected(!connected);
     }
@@ -162,7 +176,7 @@ public class MainActivity extends Activity {
                     .putExtra(GpsdClientService.GPSD_SERVER_PORT, port);
             activity.print("Streaming to " + address + ":" + port);
             try {
-                if (!activity.bindService(intent, activity.serviceConnection, BIND_AUTO_CREATE)) {
+                if (!activity.bindService(intent, activity.serviceConnection, BIND_ABOVE_CLIENT | BIND_IMPORTANT)) {
                     throw new RuntimeException("Failed to bind to service");
                 }
                 if (activity.startService(intent) == null) {
@@ -175,6 +189,7 @@ public class MainActivity extends Activity {
                 activity.print(e.getMessage());
             }
             activity.startStopButton.setEnabled(true);
+            activity.gpsdServiceTask = null;
         }
     }
 

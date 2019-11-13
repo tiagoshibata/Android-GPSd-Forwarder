@@ -6,13 +6,8 @@ import android.app.NotificationManager;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
-import android.location.GpsStatus.NmeaListener;
-import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
-import android.location.LocationProvider;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.IBinder;
 import android.os.PowerManager;
 import android.util.Log;
@@ -20,19 +15,17 @@ import android.util.Log;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 
-// TODO NmeaListener is deprecated in API level 24
-// Replace with OnNmeaMessageListener when support for old devices is dropped
-public class GpsdClientService extends Service implements LocationListener, NmeaListener {
+public class GpsdClientService extends Service implements LoggingCallback, OnNmeaMessageListenerCompat {
     public static final String GPSD_SERVER_ADDRESS = "io.github.tiagoshibata.GPSD_SERVER_ADDRESS";
     public static final String GPSD_SERVER_PORT = "io.github.tiagoshibata.GPSD_SERVER_PORT";
     private static final String TAG = "GpsdClientService";
     private static final String NOTIFICATION_CHANNEL = "gpsd_streaming";
     private static final int NOTIFICATION_ID = 1;
-    private LocationManager locationManager;
     private UdpSensorStream sensorStream;
     private Binder binder = new Binder();
     private LoggingCallback loggingCallback;
     private PowerManager.WakeLock wakeLock;
+    private NmeaMessageListenerCompat nmeaMessageListener = new NmeaMessageListenerCompat();
 
     class Binder extends android.os.Binder {
         void setLoggingCallback(LoggingCallback callback) {
@@ -43,17 +36,13 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
     @Override
     public void onCreate() {
         super.onCreate();
-        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         try {
-            locationManager.addNmeaListener(this);
-            try {
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, this);
-            } catch (IllegalArgumentException e) {
-                fail("No GPS available");
-            }
-        } catch (SecurityException e) {
-            fail("No permission to access GPS");
+            nmeaMessageListener.start((LocationManager)getSystemService(Context.LOCATION_SERVICE), this, this);
+        } catch (RuntimeException e) {
+            log(e.getMessage());
         }
+
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             // Setup notification channel
             NotificationManager notificationManager = (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
@@ -63,7 +52,7 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
                     NotificationManager.IMPORTANCE_LOW));
         }
         PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
-        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "GPSd Client");
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "GPSdClient:GPSdStreaming");
         wakeLock.acquire();
     }
 
@@ -109,47 +98,21 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
     @Override
     public void onDestroy() {
         super.onDestroy();
-        locationManager.removeNmeaListener(this);
-        locationManager.removeUpdates(this);
+        nmeaMessageListener.stop();
         if (sensorStream != null)
             sensorStream.stop();
         wakeLock.release();
     }
 
+
     @Override
-    public void onNmeaReceived(long timestamp, String nmea) {
+    public void onNmeaMessage(String nmeaMessage) {
         if (sensorStream != null)
-            sensorStream.send(nmea + "\r\n");
+            sensorStream.send(nmeaMessage + "\r\n");
     }
 
     @Override
-    public void onLocationChanged(Location location) {
-        // Ignored
-    }
-
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-        // GnssStatus.Callback provides more satellite information if desired, and information when
-        // the system enables or disables the hardware
-        String message = provider + " status: " + gpsStatusToString(status);
-        int satellites = extras.getInt("satellites", -1);
-        if (satellites == -1)
-            log(message);
-        else
-            log(message + " with " + Integer.toString(satellites) + " satellites");
-    }
-
-    @Override
-    public void onProviderEnabled(String provider) {
-        log("Location provider enabled: " + provider);
-    }
-
-    @Override
-    public void onProviderDisabled(String provider) {
-        log("Location provider disabled: " + provider);
-    }
-
-    private void log(String message) {
+    public void log(String message) {
         Log.i(TAG, message);
         if (loggingCallback != null)
             loggingCallback.log(message);
@@ -159,18 +122,5 @@ public class GpsdClientService extends Service implements LocationListener, Nmea
         log(message);
         stopForeground(true);
         stopSelf();
-    }
-
-    private String gpsStatusToString(int status) {
-        switch (status) {
-            case LocationProvider.OUT_OF_SERVICE:
-                return "Out of service";
-            case LocationProvider.TEMPORARILY_UNAVAILABLE:
-                return "Temporarily unavailable";
-            case LocationProvider.AVAILABLE:
-                return "Available";
-            default:
-                return "Unknown";
-        }
     }
 }
