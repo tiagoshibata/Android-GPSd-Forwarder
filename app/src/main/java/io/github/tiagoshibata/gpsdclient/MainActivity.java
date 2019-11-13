@@ -208,7 +208,6 @@ public class MainActivity extends Activity {
     private void setServiceConnected(boolean connected) {
         this.connected = connected;
         startStopButton.setText(connected ? R.string.stop : R.string.start);
-        startStopButton.setEnabled(false);
         serverAddressTextView.setEnabled(!connected);
         serverPortTextView.setEnabled(!connected);
     }
