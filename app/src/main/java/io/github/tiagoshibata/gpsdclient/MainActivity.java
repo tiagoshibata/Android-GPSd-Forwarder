@@ -29,7 +29,7 @@ public class MainActivity extends Activity {
     private static final int REQUEST_CODE_FINE_LOCATION = 0;
     private static final String SERVER_ADDRESS = "SERVER_ADDRESS";
     private static final String SERVER_PORT = "SERVER_PORT";
-    private Intent gpsdClientServiceIntent;
+    private Intent gpsdForwarderServiceIntent;
     private SharedPreferences preferences;
     private TextView textView;
     private TextView serverAddressTextView;
@@ -41,13 +41,13 @@ public class MainActivity extends Activity {
 
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
-            GpsdClientService.Binder binder = (GpsdClientService.Binder)service;
+            GpsdForwarderService.Binder binder = (GpsdForwarderService.Binder)service;
             binder.setLoggingCallback(logger);
         }
 
         @Override
         public void onServiceDisconnected(ComponentName name) {
-            logger.log("GpsdClientService died");
+            logger.log("GpsdForwarderService died");
             setServiceConnected(false);
             startStopButton.setEnabled(true);
         }
@@ -184,9 +184,9 @@ public class MainActivity extends Activity {
             MainActivity activity = activityRef.get();
             if (activity == null)
                 return;
-            Intent intent = new Intent(activity, GpsdClientService.class);
-            intent.putExtra(GpsdClientService.GPSD_SERVER_ADDRESS, address)
-                    .putExtra(GpsdClientService.GPSD_SERVER_PORT, port);
+            Intent intent = new Intent(activity, GpsdForwarderService.class);
+            intent.putExtra(GpsdForwarderService.GPSD_SERVER_ADDRESS, address)
+                    .putExtra(GpsdForwarderService.GPSD_SERVER_PORT, port);
             activity.print("Streaming to " + address + ":" + port);
             try {
                 if (!activity.bindService(intent, activity.serviceConnection, BIND_ABOVE_CLIENT | BIND_IMPORTANT)) {
@@ -196,7 +196,7 @@ public class MainActivity extends Activity {
                     activity.unbindService(activity.serviceConnection);
                     throw new RuntimeException("Failed to start service");
                 }
-                activity.gpsdClientServiceIntent = intent;
+                activity.gpsdForwarderServiceIntent = intent;
             } catch (RuntimeException e) {
                 activity.setServiceConnected(false);
                 activity.print(e.getMessage());
@@ -211,10 +211,10 @@ public class MainActivity extends Activity {
             gpsdServiceTask.cancel(true);
             gpsdServiceTask = null;
         }
-        if (gpsdClientServiceIntent != null) {
+        if (gpsdForwarderServiceIntent != null) {
             unbindService(serviceConnection);
-            stopService(gpsdClientServiceIntent);
-            gpsdClientServiceIntent = null;
+            stopService(gpsdForwarderServiceIntent);
+            gpsdForwarderServiceIntent = null;
         }
     }
 

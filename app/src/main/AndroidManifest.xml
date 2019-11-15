@@ -21,7 +21,7 @@
             </intent-filter>
         </activity>
         <service
-            android:name=".GpsdClientService"
+            android:name=".GpsdForwarderService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="location" />

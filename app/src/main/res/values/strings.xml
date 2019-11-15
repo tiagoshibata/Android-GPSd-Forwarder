@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">GPSd Client</string>
+    <string name="app_name">GPSd Forwarder</string>
     <string name="notification_channel_name">GPS streaming notification</string>
     <string name="start">Start</string>
     <string name="stop">Stop</string>

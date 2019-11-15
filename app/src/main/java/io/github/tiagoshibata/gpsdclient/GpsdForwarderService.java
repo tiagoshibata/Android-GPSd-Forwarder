@@ -15,7 +15,7 @@ import android.util.Log;
 import java.net.InetSocketAddress;
 import java.net.SocketException;
 
-public class GpsdClientService extends Service implements LoggingCallback, OnNmeaMessageListenerCompat {
+public class GpsdForwarderService extends Service implements LoggingCallback, OnNmeaMessageListenerCompat {
     public static final String GPSD_SERVER_ADDRESS = "io.github.tiagoshibata.GPSD_SERVER_ADDRESS";
     public static final String GPSD_SERVER_PORT = "io.github.tiagoshibata.GPSD_SERVER_PORT";
     private static final String TAG = "GpsdClientService";

@@ -1,4 +1,4 @@
-# Android GPSd Client
+# Android GPSd Forwarder
 
 This application forwards NMEA data from your phone's GPS to a specified host. It's goal is to easily plug and feed data into a GPS server service (e.g. GPSd), using your cellphone as a GPS device. This way, your cellphone can be used as a GPS in navigation or robotics applications running in a host computer.
 
