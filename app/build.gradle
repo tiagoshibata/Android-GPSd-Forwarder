@@ -6,8 +6,8 @@ android {
         applicationId "io.github.tiagoshibata.gpsdclient"
         minSdkVersion 19
         targetSdkVersion 29
-        versionCode 3
-        versionName "1.0.2"
+        versionCode 4
+        versionName "1.0.3"
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_1_8
