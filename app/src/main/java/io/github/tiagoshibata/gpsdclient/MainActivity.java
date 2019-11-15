@@ -90,8 +90,16 @@ public class MainActivity extends Activity {
         });
 
         preferences = getPreferences(MODE_PRIVATE);
-        serverAddressTextView.setText(preferences.getString(SERVER_ADDRESS, ""));
-        serverPortTextView.setText(preferences.getString(SERVER_PORT, ""));
+        serverAddressTextView.setText(getStringPreferenceOrEmpty(SERVER_ADDRESS));
+        serverPortTextView.setText(getStringPreferenceOrEmpty(SERVER_PORT));
+    }
+
+    private String getStringPreferenceOrEmpty(String key) {
+        try {
+            return preferences.getString(key, "");
+        } catch (ClassCastException e) {
+            return "";  // Device has legacy preference with an incompatible type
+        }
     }
 
     @Override
