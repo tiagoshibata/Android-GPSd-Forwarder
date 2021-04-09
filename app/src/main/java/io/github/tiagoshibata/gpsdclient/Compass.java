@@ -67,7 +67,7 @@ public class Compass implements SensorEventListener {
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        final float alpha = 0.000097f;
+        final float alpha = 0.97f;
 
         //synchronized (this) {
             if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
