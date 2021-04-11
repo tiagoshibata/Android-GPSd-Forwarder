@@ -7,7 +7,9 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 
 import java.util.Locale;
-
+//##########################################################################
+// This Software is copied from https://github.com/iutinvg/compass.git
+//##########################################################################
 public class Compass implements SensorEventListener {
     private static final String TAG = "Compass";
 
