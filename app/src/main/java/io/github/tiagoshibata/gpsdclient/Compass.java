@@ -5,6 +5,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.location.OnNmeaMessageListener;
 
 import java.util.Locale;
 //##########################################################################
@@ -69,9 +70,9 @@ public class Compass implements SensorEventListener {
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        final float alpha = 0.97f;
-
-        //synchronized (this) {
+        final float alpha = 0.99f;
+        //long time = 0;
+        synchronized (this) {
             if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
 
                 mGravity[0] = alpha * mGravity[0] + (1 - alpha)
@@ -108,12 +109,13 @@ public class Compass implements SensorEventListener {
                 azimuth = (float) Math.toDegrees(orientation[0]); // orientation
                 azimuth = (-azimuth + azimuthFix + 360) % 360;
                 // Log.d(TAG, "azimuth (deg): " + azimuth);
+                System.currentTimeMillis();
                 if (listener != null) {
                      listener.onNewAzimuth(azimuth);
                //     listener.onNewAzimuth(pitch);
                 }
             }
-       // }
+       }
 
     }
 

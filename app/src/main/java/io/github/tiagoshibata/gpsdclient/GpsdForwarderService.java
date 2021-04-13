@@ -17,7 +17,7 @@ import java.net.SocketException;
 import java.util.Locale;
 
 
-public /*static*/ class GpsdForwarderService extends Service implements LoggingCallback, OnNmeaMessageListenerCompat {
+public /*static*/ class GpsdForwarderService extends Service implements LoggingCallback, OnNmeaMessageListenerCompat/*, Compass.CompassListener */{
         public static final String GPSD_SERVER_ADDRESS = "io.github.tiagoshibata.GPSD_SERVER_ADDRESS";
         public static final String GPSD_SERVER_PORT = "io.github.tiagoshibata.GPSD_SERVER_PORT";
         private static final String TAG = "GpsdClientService";
@@ -83,6 +83,9 @@ public /*static*/ class GpsdForwarderService extends Service implements LoggingC
 
                         }
                     });*/
+                    if (sensorStream != null) {
+                        sensorStream.send(NMEA_format(compass.getAzimuth()) + "\r\n");
+                    }
                 }
             };
         }
@@ -170,11 +173,19 @@ public /*static*/ class GpsdForwarderService extends Service implements LoggingC
         public void onNmeaMessage(String nmeaMessage) {
             if (sensorStream != null) {
                ;
-                sensorStream.send(nmeaMessage + "\r\n"+ NMEA_format(compass.getAzimuth()));
+                sensorStream.send(nmeaMessage + "\r\n");
 
             }
 
         }
+
+  /*      @Override
+        public void onNewAzimuth(float azimuth) {
+            if (sensorStream != null) {
+                sensorStream.send(NMEA_format(compass.getAzimuth()) + "\r\n");
+            }
+        }
+*/
 
         @Override
         public void log(String message) {
