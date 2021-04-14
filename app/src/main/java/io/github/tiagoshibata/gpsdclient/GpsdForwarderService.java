@@ -103,14 +103,14 @@ public /*static*/ class GpsdForwarderService extends Service implements LoggingC
             int serverPort = intent.getIntExtra(GPSD_SERVER_PORT, -1);
             if (serverAddress == null || serverPort <= 0)
                 throw new RuntimeException(
-                        "GpsdClientService requires parameters " + GPSD_SERVER_ADDRESS + " and " + GPSD_SERVER_PORT);
+                        "Gps/Compass ClientService requires parameters " + GPSD_SERVER_ADDRESS + " and " + GPSD_SERVER_PORT);
             Context applicationContext = getApplicationContext();
             Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ?
                     new Notification.Builder(applicationContext, NOTIFICATION_CHANNEL) :
                     new Notification.Builder(applicationContext);
             builder
                     .setSmallIcon(R.drawable.notification_icon)
-                    .setContentTitle("Streaming GPS")
+                    .setContentTitle("Streaming GPS/Compass")
                     .setContentText("Streaming to " + serverAddress + ":" + serverPort)
                     .build();
             startForeground(NOTIFICATION_ID, builder.build());
