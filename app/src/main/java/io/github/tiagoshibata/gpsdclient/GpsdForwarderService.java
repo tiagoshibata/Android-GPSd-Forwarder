@@ -17,7 +17,7 @@ import java.net.SocketException;
 import java.util.Locale;
 
 
-public /*static*/ class GpsdForwarderService extends Service implements LoggingCallback, OnNmeaMessageListenerCompat {
+public /*static*/ class GpsdForwarderService extends Service implements LoggingCallback, OnNmeaMessageListenerCompat/*, Compass.CompassListener */{
         public static final String GPSD_SERVER_ADDRESS = "io.github.tiagoshibata.GPSD_SERVER_ADDRESS";
         public static final String GPSD_SERVER_PORT = "io.github.tiagoshibata.GPSD_SERVER_PORT";
         private static final String TAG = "GpsdClientService";
@@ -83,6 +83,9 @@ public /*static*/ class GpsdForwarderService extends Service implements LoggingC
 
                         }
                     });*/
+                    if (sensorStream != null) {
+                        sensorStream.send(NMEA_format(compass.getAzimuth()) + "\r\n");
+                    }
                 }
             };
         }
@@ -100,14 +103,14 @@ public /*static*/ class GpsdForwarderService extends Service implements LoggingC
             int serverPort = intent.getIntExtra(GPSD_SERVER_PORT, -1);
             if (serverAddress == null || serverPort <= 0)
                 throw new RuntimeException(
-                        "GpsdClientService requires parameters " + GPSD_SERVER_ADDRESS + " and " + GPSD_SERVER_PORT);
+                        "Gps/Compass ClientService requires parameters " + GPSD_SERVER_ADDRESS + " and " + GPSD_SERVER_PORT);
             Context applicationContext = getApplicationContext();
             Notification.Builder builder = Build.VERSION.SDK_INT >= Build.VERSION_CODES.O ?
                     new Notification.Builder(applicationContext, NOTIFICATION_CHANNEL) :
                     new Notification.Builder(applicationContext);
             builder
                     .setSmallIcon(R.drawable.notification_icon)
-                    .setContentTitle("Streaming GPS")
+                    .setContentTitle("Streaming GPS/Compass")
                     .setContentText("Streaming to " + serverAddress + ":" + serverPort)
                     .build();
             startForeground(NOTIFICATION_ID, builder.build());
@@ -170,11 +173,19 @@ public /*static*/ class GpsdForwarderService extends Service implements LoggingC
         public void onNmeaMessage(String nmeaMessage) {
             if (sensorStream != null) {
                ;
-                sensorStream.send(nmeaMessage + "\r\n"+ NMEA_format(compass.getAzimuth()));
+                sensorStream.send(nmeaMessage + "\r\n");
 
             }
 
         }
+
+  /*      @Override
+        public void onNewAzimuth(float azimuth) {
+            if (sensorStream != null) {
+                sensorStream.send(NMEA_format(compass.getAzimuth()) + "\r\n");
+            }
+        }
+*/
 
         @Override
         public void log(String message) {

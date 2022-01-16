@@ -5,6 +5,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.location.OnNmeaMessageListener;
 
 import java.util.Locale;
 //##########################################################################
@@ -12,7 +13,7 @@ import java.util.Locale;
 //##########################################################################
 public class Compass implements SensorEventListener {
     private static final String TAG = "Compass";
-
+    private static long prevtime;
     public interface CompassListener {
         void onNewAzimuth(float azimuth);
     }
@@ -69,9 +70,10 @@ public class Compass implements SensorEventListener {
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        final float alpha = 0.97f;
+        final float alpha = 0.99f;
 
-        //synchronized (this) {
+        long actualtime = 0;
+        synchronized (this) {
             if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
 
                 mGravity[0] = alpha * mGravity[0] + (1 - alpha)
@@ -108,12 +110,15 @@ public class Compass implements SensorEventListener {
                 azimuth = (float) Math.toDegrees(orientation[0]); // orientation
                 azimuth = (-azimuth + azimuthFix + 360) % 360;
                 // Log.d(TAG, "azimuth (deg): " + azimuth);
-                if (listener != null) {
+             //   boolean b = 500 < ((actualtime - prevtime) & 0xEFFFFFFF);
+                actualtime = System.currentTimeMillis();
+                if ((listener != null ) & (250 < ((actualtime - prevtime) & 0xEFFFFFFF))){
                      listener.onNewAzimuth(azimuth);
+                    prevtime =actualtime;
                //     listener.onNewAzimuth(pitch);
                 }
             }
-       // }
+       }
 
     }
 
